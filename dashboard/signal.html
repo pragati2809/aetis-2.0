@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AETIS Signal Display</title>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      transition: background 0.6s;
+    }
+    body.green { background: #0a2a0a; }
+    body.red   { background: #1a0000; }
+    #signal-post {
+      width: 120px;
+      background: #2a2a2a;
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border: 3px solid #444;
+    }
+    .light {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 4px solid #333;
+      transition: background 0.5s, box-shadow 0.5s;
+    }
+    #light-red    { background: #3a0000; }
+    #light-yellow { background: #2a2000; }
+    #light-green  { background: #003a00; }
+    body.red   #light-red    { background: #ff1a1a; box-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000; }
+    body.green #light-green  { background: #00ff44; box-shadow: 0 0 40px #00ff00, 0 0 80px #00ff00; }
+    body.yellow #light-yellow { background: #ffdd00; box-shadow: 0 0 40px #ffcc00; }
+    #label {
+      margin-top: 24px;
+      font-size: 28px;
+      font-weight: bold;
+      color: #ffffff;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+    #signal-name {
+      margin-top: 8px;
+      font-size: 16px;
+      color: #888;
+      letter-spacing: 2px;
+    }
+    #connection-status {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      font-size: 12px;
+      color: #555;
+    }
+    .ev-alert {
+      position: fixed;
+      top: 24px;
+      font-size: 22px;
+      color: #ffffff;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 24px;
+      border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .ev-alert.show { opacity: 1; }
+  </style>
+</head>
+<body class="red">
+  <div class="ev-alert" id="ev-alert">🚑 Emergency Vehicle Approaching</div>
+  <div id="signal-post">
+    <div class="light" id="light-red"></div>
+    <div class="light" id="light-yellow"></div>
+    <div class="light" id="light-green"></div>
+  </div>
+  <div id="label">RED</div>
+  <div id="signal-name">{{SIGNAL_ID}}</div>
+  <div id="connection-status">Connecting...</div>
+ 
+<script>
+const SIGNAL_ID  = "{{SIGNAL_ID}}";
+// UPDATE THIS IP to Laptop 1's IP address on your WiFi
+const wsUrl = 'ws://' + window.location.host + '/ws/signal/' + SIGNAL_ID;
+const SERVER_PORT = "8000";
+ 
+let state = "red";
+ 
+function setState(newState) {
+  state = newState;
+  document.body.className = newState;
+  document.getElementById('label').textContent = newState.toUpperCase();
+ 
+  if (newState === "green") {
+    const alert = document.getElementById('ev-alert');
+    alert.classList.add('show');
+    setTimeout(() => alert.classList.remove('show'), 6000);
+  }
+}
+ 
+function connect() {
+  const wsUrl = 'ws://' + window.location.host + '/ws/signal/' + SIGNAL_ID;
+  const ws = new WebSocket(wsUrl);
+  const status = document.getElementById('connection-status');
+
+  ws.onopen = () => {
+    console.log("✅ WS CONNECTED:", wsUrl);
+    status.textContent = '● Connected to AETIS';
+  };
+
+  ws.onclose = () => {
+    console.log("❌ WS CLOSED");
+    status.textContent = '○ Reconnecting...';
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = (err) => {
+    console.log("❌ WS ERROR", err);
+    status.textContent = '✕ Connection error';
+  };
+
+  ws.onmessage = (e) => {
+    console.log("📩 MESSAGE:", e.data);
+    const msg = JSON.parse(e.data);
+
+    if (msg.action === "GREEN") {
+      setState("green");
+    } else if (msg.action === "RED") {
+      setState("red");
+    }
+  };
+}
+connect();
+</script>
+</body>
+</html>

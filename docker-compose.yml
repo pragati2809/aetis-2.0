@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    restart: always
+ 
+  postgres:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: aetis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin1515
+    ports: ["5433:5433"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    restart: always
+ 
+volumes:
+  pgdata:
